@@ -416,7 +416,7 @@ class XATTRTest(TestUtil):
 
         # Create extended attribute
         indentstr = " " * indent
-        self.dprint('DBG1', "%sSet extended attribute [%s] for %r%s" % (indentstr, name, absfile, xmsg))
+        self.dprint('DBG1', "%sSet extended attribute [%s] for %r [%r]%s" % (indentstr, name, absfile, value, xmsg))
         os.setxattr(absfile, name, value, flags=stype)
         return name
 
