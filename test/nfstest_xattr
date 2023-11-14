@@ -761,7 +761,6 @@ class XATTRTest(TestUtil):
             nfs4errlist = [estatus, NFS4ERR_NOENT]
             if rmtdeleg:
                 nfs4errlist.append(NFS4ERR_DELAY)
-            file_name = filename
 
             self.set_nfserr_list(nfs4list=nfs4errlist)
             self.trace_open()
@@ -774,7 +773,7 @@ class XATTRTest(TestUtil):
             deleg_stateid = None
             if rmtdeleg:
                 # Look for delegation on second client
-                filehandle, open_stateid, deleg_stateid = self.find_open(filename=file_name, nfs_version=self.clientobj.nfs_version)
+                filehandle, open_stateid, deleg_stateid = self.find_open(filename=filename, nfs_version=self.clientobj.nfs_version)
                 cbcall, cbreply = self.find_nfs_op(OP_CB_RECALL, ipaddr=self.client_ipaddr, port=None, src_ipaddr=self.server_ipaddr, first_call=True, nfs_version=None)
                 if cbcall:
                     self.pktt.rewind(cbcall.record.index)
@@ -785,7 +784,7 @@ class XATTRTest(TestUtil):
             cookie = 0
             xlist = set()
             xlist_done = set()
-            fh = self.name_fh.get(file_name)
+            fh = self.name_fh.get(filename)
             matchstr = "nfs.argop == %d" % opcode
             cbrecall_done = False
             self.pktt.clear_xid_list()
