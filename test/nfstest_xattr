@@ -281,9 +281,14 @@ class XATTRTest(TestUtil):
 
         self.xattrbase = "user.xattr"
         self.xattrdidx = {}
-        self.dgfileidx = 1
-        self.removeidx = 2
-        self.mxattridx = 0
+
+        self.kofileidx  = 0  # Index for file so open owner sticks around
+        self.noxattridx = 0  # Index for file with no extended attributes
+        self.xattridx   = 1  # Index for file with extended attributes
+        self.mxattridx  = 0  # Index for file with many extended attributes
+        self.dgfileidx  = 1  # Starting file index for tests with delegations
+
+        self.removeidx  = 2  # Starting index for extended attribute to remove, e.g., user.xattr02
 
         self.xattrname = ""
         self.xattr_values = {}
@@ -327,46 +332,55 @@ class XATTRTest(TestUtil):
     def setup(self):
         """Setup test environment"""
         self.dprint('DBG7', "SETUP starts")
-        self.kofileidx  = 0  # Index so open owner sticks around
-        self.noxattridx = 0  # Index for file with no extended attributes
-        self.xattridx   = 1  # Index for file with extended attributes
 
-        run_tests     = set(self.testlist)
-        deleg_list    = set(group_list(GROUP_DELEG))
-        deleg_tests   = run_tests & deleg_list
-        nodeleg_tests = run_tests - deleg_list
-
-        nremove = 0
-        nmxattr = 0
+        ntdeleg = 0  # Need file to open so open owner sticks around
+        noxattr = 0  # Need file with no extended attributes
+        ngxattr = 0  # Need file with at least one extended attribute
+        nmxattr = 0  # Need file with many extended attributes
+        nremove = 0  # Number of tests which remove extended attributes
         for tname in self.testlist:
+            if group_test(tname, GROUP_DELEG):
+                ntdeleg = 1
+            elif group_test(tname, GROUP_CINFO) or \
+                 group_test(tname, GROUP_GETXATTR) or \
+                 group_test(tname, GROUP_SETXATTR) or \
+                 group_test(tname, GROUP_LISTXATTRS):
+                ngxattr = 1
+            if group_test(tname, GROUP_NOXATTRS|GROUP_NODELEG):
+                noxattr = 1
+            if group_test(tname, GROUP_MANYXATTRS|GROUP_NODELEG):
+                nmxattr = 1
             if group_test(tname, GROUP_REMOVEXATTR|GROUP_NODELEG):
                 nremove += 1
-            elif group_test(tname, GROUP_MANYXATTRS|GROUP_NODELEG):
-                nmxattr = 1
 
         try:
             self.trace_start()
             self.mount()
 
-            if deleg_tests:
-                # Create file so open owner sticks around
+            if ntdeleg:
+                # Create file to open so open owner sticks around
                 self.create_file()
                 self.kofileidx = self.get_findex()
 
-            if nodeleg_tests:
-                # Create files for non-deleg tests
+            if noxattr:
+                # Create file with no extended attributes for non-deleg tests
                 self.create_file()
                 self.noxattridx = self.get_findex()
+
+            self.removeidx = ngxattr + 1
+            if ngxattr or nremove:
+                # Create file with extended attributes for non-deleg tests
                 self.create_file()
-                self.xattridx   = self.get_findex()
-                for i in range(1 + nremove):
+                self.xattridx = self.get_findex()
+                for i in range(ngxattr + nremove):
                     self.set_xattr(self.filename, indent=4)
 
-                if nmxattr:
-                    self.create_file()
-                    self.mxattridx = self.get_findex()
-                    for i in range(self.num_xattrs):
-                        self.set_xattr(self.filename, indent=4)
+            if nmxattr:
+                # Create file with many extended attributes for non-deleg tests
+                self.create_file()
+                self.mxattridx = self.get_findex()
+                for i in range(self.num_xattrs):
+                    self.set_xattr(self.filename, indent=4)
 
             # File index for deleg tests
             self.dgfileidx = self.get_findex() + 1
