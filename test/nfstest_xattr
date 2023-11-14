@@ -453,7 +453,7 @@ class XATTRTest(TestUtil):
                 fh = getattr(self.getop(pkt, OP_GETFH), "fh", None)
                 if pkt_call.NFSop.op == OP_PUTROOTFH:
                     self.name_fh["/"] = fh
-                else:
+                elif getattr(pkt_call.NFSop, 'name', None) is not None:
                     self.name_fh[pkt_call.NFSop.name] = fh
         self.pktt.rewind()
 
