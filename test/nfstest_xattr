@@ -411,7 +411,8 @@ class XATTRTest(TestUtil):
             # Contents for the extended attribute are based on the index
             value = self.data_pattern((idx-1)*32, 32)
 
-        self.xattr_values[name] = value
+        file_xattrs = self.xattr_values.setdefault(filename, {})
+        file_xattrs[name] = value
 
         # Create extended attribute
         indentstr = " " * indent
@@ -477,7 +478,7 @@ class XATTRTest(TestUtil):
             amsg = "fail with %s" % errstr
         return expr, amsg, fmsg
 
-    def verify_xattr_call(self, pkt, opcode, opstr, fh, ename=None, stype=0, cookie=0):
+    def verify_xattr_call(self, pkt, opcode, opstr, fh, filename, ename=None, stype=0, cookie=0, xvalue=None):
         """Verify Packet Call"""
         callobj  = pkt.NFSop
         ename = self.xattrname if ename is None else ename
@@ -500,7 +501,8 @@ class XATTRTest(TestUtil):
             fmsg = ", expecting %r but got %r" % (xname, callobj.name)
             self.test(expr, "%s call  should be sent with correct attribute name" % opstr, failmsg=fmsg)
             if opcode == OP_SETXATTR:
-                xvalue = self.xattr_values.get(ename)
+                if xvalue is None:
+                    xvalue = self.xattr_values.get(filename, {}).get(ename)
                 expr = (callobj.value == xvalue)
                 fmsg = ", expecting %r but got %r" % (xvalue, callobj.value)
                 self.test(expr, "%s call  should be sent with correct attribute value" % opstr, failmsg=fmsg)
@@ -509,7 +511,7 @@ class XATTRTest(TestUtil):
                 fmsg = ", expecting %r but got %r" % (xoption, callobj.option)
                 self.test(expr, "%s call  should be sent with correct option" % opstr, failmsg=fmsg)
 
-    def verify_xattr_reply(self, pkt, idx, opcode, opstr, estatus, ename=None, user_xattrs=[], cinfo=None, cinfodiff=False, emsg=""):
+    def verify_xattr_reply(self, pkt, idx, opcode, opstr, estatus, filename, ename=None, user_xattrs=[], cinfo=None, cinfodiff=False, emsg=""):
         """Verify Packet Reply"""
         self.test(pkt, "%s reply should be sent to client" % opstr)
 
@@ -551,7 +553,8 @@ class XATTRTest(TestUtil):
                 fmsg = ", expecting %s but got %s" % (beof, replyobj.eof)
                 self.test(replyobj.eof == beof, "%s reply should return eof=%s" % (opstr, beof), failmsg=fmsg)
             elif opcode == OP_GETXATTR:
-                expr = (replyobj.value == self.xattr_values.get(ename))
+                xvalue = self.xattr_values.get(filename, {}).get(ename)
+                expr = (replyobj.value == xvalue)
                 self.test(expr, "%s reply should return correct attribute value" % opstr)
             elif opcode in (OP_SETXATTR, OP_REMOVEXATTR):
                 expr = (replyobj.info.before != replyobj.info.after)
@@ -671,7 +674,8 @@ class XATTRTest(TestUtil):
                 expr, amsg, fmsg = self.get_assertion(failure, err, "get attribute value")
                 self.test(expr, "GETXATTR should %s" % amsg, failmsg=fmsg)
                 if value is not None:
-                    expr = (value == self.xattr_values.get(ename))
+                    xvalue = self.xattr_values.get(filename, {}).get(ename)
+                    expr = (value == xvalue)
                     self.test(expr, "GETXATTR should return correct attribute value")
             elif opcode == OP_SETXATTR:
                 opstr = "SETXATTR"
@@ -692,7 +696,8 @@ class XATTRTest(TestUtil):
                     self.dprint('DBG2', "Get extended attribute [%s] for %s" % (ename, absfile))
                     value = os.getxattr(absfile, ename)
                     self.dprint('DBG3', "Extended attribute value: %r" % value)
-                    expr = value == self.xattr_values.get(ename)
+                    xvalue = self.xattr_values.get(filename, {}).get(ename)
+                    expr = (value == xvalue)
                     self.test(expr, "Extended attribute value should be correct")
             elif opcode == OP_REMOVEXATTR:
                 opstr = "REMOVEXATTR"
@@ -792,7 +797,7 @@ class XATTRTest(TestUtil):
                     replyobj = pkt.nfs.array[pkt_call.NFSidx]
 
                     # Verify Packet Call
-                    self.verify_xattr_call(pkt_call, opcode, opstr, fh, ename, stype, cookie)
+                    self.verify_xattr_call(pkt_call, opcode, opstr, fh, filename, ename, stype, cookie)
 
                     estat = estatus
                     if rmtdeleg and opcode in (OP_SETXATTR, OP_REMOVEXATTR) and cbcall:
@@ -812,7 +817,7 @@ class XATTRTest(TestUtil):
                             xlist = xlist.difference(xlist_done)
 
                     # Verify Packet Reply
-                    cookie = self.verify_xattr_reply(pkt, pkt_call.NFSidx, opcode, opstr, estat, ename, xlist, emsg=emsg)
+                    cookie = self.verify_xattr_reply(pkt, pkt_call.NFSidx, opcode, opstr, estat, filename, ename, xlist, emsg=emsg)
 
                     if opcode == OP_LISTXATTRS:
                         if replyobj.eof:
@@ -928,10 +933,10 @@ class XATTRTest(TestUtil):
                     index += 1
 
                     # Verify Packet Call
-                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, ename, stype)
+                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, filename, ename, stype)
 
                     # Verify Packet Reply
-                    self.verify_xattr_reply(pkt, pkt_call.NFSidx, OP_SETXATTR, opstr, estatus, ename, cinfo=cinfo, cinfodiff=cmod)
+                    self.verify_xattr_reply(pkt, pkt_call.NFSidx, OP_SETXATTR, opstr, estatus, filename, ename, cinfo=cinfo, cinfodiff=cmod)
                     cinfo = replyobj.info.after
         except Exception:
             self.test(False, traceback.format_exc())
