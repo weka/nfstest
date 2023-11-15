@@ -790,11 +790,12 @@ class XATTRTest(TestUtil):
                     err = error.errno
                 expr, amsg, fmsg = self.get_assertion(failure, err, "succeed")
                 self.test(expr, "LISTXATTR should %s" % amsg, failmsg=fmsg)
-                if fileidx == self.noxattridx:
+                xattr_count = len(self.xattr_values.setdefault(filename, {}).keys())
+                if xattr_count == 0:
                     expr = (len(user_xattrs) == 0)
                     self.test(expr, "LISTXATTR should not return any user namespace attributes")
                 else:
-                    expr = (len(user_xattrs) > 0)
+                    expr = (len(user_xattrs) == xattr_count)
                     self.test(expr, "LISTXATTR should return all user namespace attributes")
         except Exception:
             self.test(False, traceback.format_exc())
@@ -898,7 +899,6 @@ class XATTRTest(TestUtil):
                     elif deleg_stateid and not cbrecall_done:
                         self.test(cbcall is None, "%s should not recall delegation on second client" % opstr)
             self.pktt.rewind()
-
         except Exception:
             self.test(False, traceback.format_exc())
         finally:
