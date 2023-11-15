@@ -280,7 +280,8 @@ class XATTRTest(TestUtil):
         self.scan_options()
 
         self.xattrbase = "user.xattr"
-        self.xattrdidx = {}
+        self.xnameidx  = 1    # Index for unique extended attribute names
+        self.xvalueidx = 1    # Index for unique extended attribute values
 
         self.kofileidx  = 0  # Index for file so open owner sticks around
         self.noxattridx = 0  # Index for file with no extended attributes
@@ -290,8 +291,15 @@ class XATTRTest(TestUtil):
 
         self.removeidx  = 2  # Starting index for extended attribute to remove, e.g., user.xattr02
 
-        self.xattrname = ""
+        self.xattrname  = "" # Extended attribute name used by set_xattr()
+        self.xattrvalue = "" # Extended attribute value used by set_xattr()
+
+        # Mapping xattr name to its current value on a per file basis:
+        # self.xattr_values[filename][ename] = value
         self.xattr_values = {}
+
+        # Maaping file name to file handle:
+        # self.name_fh[filename] = fh
         self.name_fh = {}
 
         # Disable createtraces option but save it first for tests that do not
@@ -408,30 +416,37 @@ class XATTRTest(TestUtil):
 
         self.dprint('DBG7', "SETUP done")
 
+    def xattr_name(self, idx):
+        return "%s%03d" % (self.xattrbase, idx)
+
     def set_xattr(self, filename, name=None, value=None, stype=0, indent=0, xmsg=""):
         """Create extended attribute on the file"""
         absfile = self.abspath(filename)
+
         if name is None:
             # No name given so create a unique name
-            idx = self.xattrdidx.setdefault(filename, 1)
-            name = "%s%02d" % (self.xattrbase, idx)
-            self.xattrdidx[filename] += 1
-        else:
-            # Use an arbitrary attribute index for named xattrs so the
-            # contents are different for all attributes
-            idx = 4096 + self.xattrdidx.setdefault(filename, 1)
+            name = self.xattr_name(self.xnameidx)
+            self.xnameidx += 1
         self.xattrname = name
+
         if value is None:
             # Contents for the extended attribute are based on the index
-            value = self.data_pattern((idx-1)*32, 32)
-
-        file_xattrs = self.xattr_values.setdefault(filename, {})
-        file_xattrs[name] = value
+            value = self.data_pattern((self.xvalueidx-1)*32, 32)
+            self.xvalueidx += 1
+        self.xattrvalue = value
 
         # Create extended attribute
         indentstr = " " * indent
         self.dprint('DBG1', "%sSet extended attribute [%s] for %r [%r]%s" % (indentstr, name, absfile, value, xmsg))
-        os.setxattr(absfile, name, value, flags=stype)
+        try:
+            # Create/modify extended attribute
+            os.setxattr(absfile, name, value, flags=stype)
+
+            # Save contents for extended attribute
+            file_xattrs = self.xattr_values.setdefault(filename, {})
+            file_xattrs[name] = value
+        finally:
+            pass
         return name
 
     def get_deleg_remote(self, filename):
@@ -516,7 +531,9 @@ class XATTRTest(TestUtil):
             self.test(expr, "%s call  should be sent with correct attribute name" % opstr, failmsg=fmsg)
             if opcode == OP_SETXATTR:
                 if xvalue is None:
-                    xvalue = self.xattr_values.get(filename, {}).get(ename)
+                    # Use xattr value used by setxattr() not the current
+                    # contents of the extended attribute
+                    xvalue = self.xattrvalue
                 expr = (callobj.value == xvalue)
                 fmsg = ", expecting %r but got %r" % (xvalue, callobj.value)
                 self.test(expr, "%s call  should be sent with correct attribute value" % opstr, failmsg=fmsg)
@@ -654,16 +671,15 @@ class XATTRTest(TestUtil):
                 # Get a read delegation on the remote client
                 self.get_deleg_remote(filename)
             else:
-               filename = self.files[fileidx]
+                filename = self.files[fileidx]
             absfile = self.abspath(filename)
 
             # Valid extended attribute name for file under test
             if not rmtdeleg and opcode == OP_REMOVEXATTR:
-                idx = self.removeidx
+                name = self.xattr_name(self.removeidx)
                 self.removeidx += 1
             else:
-                idx = 1
-            name = "%s%02d" % (self.xattrbase, idx)
+                name = sorted(self.xattr_values.get(filename, {'':0}).keys())[0]
             ename = name if exists else (None if opcode == OP_SETXATTR else "user.notexisting")
 
             if namelen > 0:
@@ -867,7 +883,7 @@ class XATTRTest(TestUtil):
 
     def test_cinfo(self, **kwargs):
         """Verify extended attribute change info"""
-        fileidx  = kwargs.get("fileidx", 1) # Index of file to use for testing
+        fileidx  = kwargs.get("fileidx", self.xattridx) # Index of file to use for testing
         stype    = kwargs.get("stype",   0) # SETXATTR create/replace flag
         failure  = kwargs.get("failure", 0) # Expected failure for function
         exists   = kwargs.get("exists",  0) # Use existing attribute name
@@ -895,7 +911,7 @@ class XATTRTest(TestUtil):
 
             for i in range(4):
                 # Valid extended attribute name for file under test
-                name = "%s%02d" % (self.xattrbase, 1)
+                name = self.xattr_name(1)
                 ename = name if exists else None
 
                 if modify and i == modindex:
@@ -946,7 +962,8 @@ class XATTRTest(TestUtil):
                     index += 1
 
                     # Verify Packet Call
-                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, filename, ename, stype)
+                    xvalue = self.xattr_values.get(filename, {}).get(ename)
+                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, filename, ename, stype, xvalue=xvalue)
 
                     # Verify Packet Reply
                     self.verify_xattr_reply(pkt, pkt_call.NFSidx, OP_SETXATTR, opstr, estatus, filename, ename, cinfo=cinfo, cinfodiff=cmod)
