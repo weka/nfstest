@@ -459,6 +459,20 @@ class XATTRTest(TestUtil):
             pass
         return name
 
+    def remove_xattr(self, filename, name):
+        """Remove extended attribute"""
+        absfile = self.abspath(filename)
+        try:
+            self.dprint('DBG3', "Remove extended attribute [%s] for %s" % (name, absfile))
+            out = os.removexattr(absfile, name)
+
+            # Remove extended attribute from mapping
+            file_xattrs = self.xattr_values.setdefault(filename, {})
+            file_xattrs.pop(name, None)
+        finally:
+            pass
+        return out
+
     def get_deleg_remote(self, filename):
         """Get a read delegation on the remote client."""
         fdko = None
@@ -746,8 +760,7 @@ class XATTRTest(TestUtil):
                     self.dprint('DBG2', "List extended attributes for %s" % absfile)
                     xattr_list = os.listxattr(absfile)
                     self.dprint('DBG3', "Extended attribute list: %r" % xattr_list)
-                    self.dprint('DBG3', "Remove extended attribute [%s] for %s" % (ename, absfile))
-                    os.removexattr(absfile, ename)
+                    self.remove_xattr(filename, ename)
                 except OSError as error:
                     err = error.errno
                 try:
