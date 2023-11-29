@@ -863,7 +863,7 @@ class XATTRTest(TestUtil):
                     cookie = self.verify_xattr_reply(pkt, pkt_call.NFSidx, opcode, opstr, estat, filename, ename, xlist, emsg=emsg)
 
                     if opcode == OP_LISTXATTRS:
-                        if replyobj.eof:
+                        if replyobj.status != NFS4_OK or replyobj.eof:
                             # Done with this listing, reset the cookie
                             cookie = 0
                             xlist_done = set()
