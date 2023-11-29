@@ -670,8 +670,6 @@ class XATTRTest(TestUtil):
         failure  = kwargs.get("failure",  0)       # Expected failure for function
         estatus  = kwargs.get("estatus", NFS4_OK)  # Expected NFSv4 status
         exists   = kwargs.get("exists",   0)       # Use existing attribute name
-        namelen  = kwargs.get("namelen",  0)       # Length of attribute name to use
-        valuelen = kwargs.get("valuelen", 0)       # Length of attribute value to use
         rmtdeleg = kwargs.get("rmtdeleg", 0)       # Get delegation on second client
 
         #=======================================================================
@@ -680,7 +678,6 @@ class XATTRTest(TestUtil):
         self.test_group(re.sub("\s+", " ", self.test_description()))
         fd   = None
         fdko = None
-        srcname = None
         try:
             self.trace_start()
             self.mount()
@@ -705,14 +702,7 @@ class XATTRTest(TestUtil):
             else:
                 name = sorted(self.xattr_values.get(filename, {'':0}).keys())[0]
             ename = name if exists else (None if opcode == OP_SETXATTR else "user.notexisting")
-
-            if namelen > 0:
-                ename = "%s_%d_" % (self.xattrbase, namelen)
-                ename += "x" * (namelen - len(ename))
-
             evalue = None
-            if valuelen > 0:
-                evalue = b"X" * valuelen
 
             user_xattrs = []
             if opcode == OP_GETXATTR:
