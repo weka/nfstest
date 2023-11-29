@@ -531,7 +531,7 @@ class XATTRTest(TestUtil):
             amsg = "fail with %s" % errstr
         return expr, amsg, fmsg
 
-    def verify_xattr_call(self, pkt, opcode, opstr, fh, filename, ename=None, stype=0, cookie=0, xvalue=None):
+    def verify_xattr_call(self, pkt, opcode, opstr, fh, ename=None, stype=0, cookie=0, xvalue=None):
         """Verify Packet Call"""
         callobj  = pkt.NFSop
         ename = self.xattrname if ename is None else ename
@@ -850,7 +850,7 @@ class XATTRTest(TestUtil):
                     replyobj = pkt.nfs.array[pkt_call.NFSidx]
 
                     # Verify Packet Call
-                    self.verify_xattr_call(pkt_call, opcode, opstr, fh, filename, ename, stype, cookie)
+                    self.verify_xattr_call(pkt_call, opcode, opstr, fh, ename, stype, cookie)
 
                     estat = estatus
                     if rmtdeleg and opcode in (OP_SETXATTR, OP_REMOVEXATTR) and cbcall:
@@ -990,7 +990,7 @@ class XATTRTest(TestUtil):
 
                     # Verify Packet Call
                     xvalue = self.xattr_values.get(filename, {}).get(ename)
-                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, filename, ename, stype, xvalue=xvalue)
+                    self.verify_xattr_call(pkt_call, OP_SETXATTR, opstr, fh, ename, stype, xvalue=xvalue)
 
                     # Verify Packet Reply
                     self.verify_xattr_reply(pkt, pkt_call.NFSidx, OP_SETXATTR, opstr, estatus, filename, ename, cinfo=cinfo, cinfodiff=cmod)
