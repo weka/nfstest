@@ -906,11 +906,10 @@ class XATTRTest(TestUtil):
 
     def test_cinfo(self, **kwargs):
         """Verify extended attribute change info"""
-        fileidx  = kwargs.get("fileidx", self.xattridx) # Index of file to use for testing
         stype    = kwargs.get("stype",   0) # SETXATTR create/replace flag
-        failure  = kwargs.get("failure", 0) # Expected failure for function
         exists   = kwargs.get("exists",  0) # Use existing attribute name
         modify   = kwargs.get("modify",  0) # Modify file on a second client
+        failure  = 0 # Expected failure for function
 
         #=======================================================================
         # Main test
@@ -924,8 +923,7 @@ class XATTRTest(TestUtil):
                 # Mount server on remote client
                 self.clientobj.mount()
 
-            filename = self.files[fileidx]
-            absfile  = self.abspath(filename)
+            filename = self.files[self.xattridx]
             opcode = OP_SETXATTR
             opstr = "SETXATTR"
             estatus = NFS4_OK
@@ -973,7 +971,6 @@ class XATTRTest(TestUtil):
 
             # Look for main SETXATTR operation
             index = 0
-            cookie = 0
             cinfo = -1 # Not valid but not None so change info is displayed
             fh = self.name_fh.get(filename)
             matchstr = "nfs.argop == %d" % opcode
@@ -982,7 +979,6 @@ class XATTRTest(TestUtil):
                 pkt = self.pktt.pkt
                 if pkt.rpc.type == 1:
                     pkt_call = self.pktt.pkt_call
-                    callobj  = pkt_call.NFSop
                     replyobj = pkt.nfs.array[pkt_call.NFSidx]
                     cmod = True if modify and modindex == index else False
                     ename = ename_list[index]
