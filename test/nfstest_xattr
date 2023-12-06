@@ -781,12 +781,16 @@ class XATTRTest(TestUtil):
                 expr, amsg, fmsg = self.get_assertion(failure, err, "succeed")
                 self.test(expr, "LISTXATTR should %s" % amsg, failmsg=fmsg)
                 xattr_count = len(self.xattr_values.setdefault(filename, {}).keys())
-                if xattr_count == 0:
-                    expr = (len(user_xattrs) == 0)
-                    self.test(expr, "LISTXATTR should not return any user namespace attributes")
+                if err == 0:
+                    if xattr_count == 0:
+                        expr = (len(user_xattrs) == 0)
+                        self.test(expr, "LISTXATTR should not return any user namespace attributes")
+                    else:
+                        expr = (len(user_xattrs) == xattr_count)
+                        self.test(expr, "LISTXATTR should return all user namespace attributes")
                 else:
-                    expr = (len(user_xattrs) == xattr_count)
-                    self.test(expr, "LISTXATTR should return all user namespace attributes")
+                    # Use the cached list of attributes when listxattr call fails
+                    user_xattrs = sorted(self.xattr_values.get(filename, {}).keys())
         except Exception:
             self.test(False, traceback.format_exc())
         finally:
