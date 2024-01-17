@@ -1232,7 +1232,12 @@ class PosixTest(TestUtil):
                         fstat = posix.fstat(fd)
 
                     if ftype in [EXISTENT, SYMLINK]:
-                        if posix.O_EXCL in flags and posix.O_CREAT in flags:
+                        if posix.O_CREAT in flags and posix.O_DIRECTORY in flags:
+                            # O_CREAT and O_DIRECTORY are set
+                            (expr, fmsg) = self._oserror(openerr, errno.EINVAL)
+                            msg = "open - opening %s should return EINVAL error when O_CREAT|O_DIRECTORY is used" % fmap[ftype]
+                            self.test(expr, msg, subtest=flag_str, failmsg=fmsg)
+                        elif posix.O_EXCL in flags and posix.O_CREAT in flags:
                             # O_EXCL and O_CREAT are set
                             (expr, fmsg) = self._oserror(openerr, errno.EEXIST)
                             msg = "open - opening %s should return an error when O_EXCL|O_CREAT is used" % fmap[ftype]
