@@ -612,6 +612,7 @@ class Host(BaseObj):
                     self.mount_opts[opts[0]] = 1
             # Save "vers" option
             vers = self.mount_opts.get("vers")
+            self.dprint('DBG3', "    NFS version of mount point: %s" % vers)
             if vers is not None:
                 minorversion = self.mount_opts.get("minorversion")
                 if minorversion is not None:
@@ -619,7 +620,6 @@ class Host(BaseObj):
                     vers += (minorversion/10.0)
                 # Set the actual NFS version mounted
                 self.nfs_version = float(vers)
-            self.dprint('DBG3', "    NFS version of mount point: %s" % vers)
 
     def mount(self, **kwargs):
         """Mount the file system on the given mount point.
