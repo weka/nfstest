@@ -581,6 +581,7 @@ class Host(BaseObj):
             # Try the "findmnt" command to get options for mount point
             cmd = "findmnt %s" % self.mtpoint
             out = self.run_cmd(cmd, dlevel='DBG5', msg="Get the actual NFS version of mount point: ")
+            self.dprint('DBG3', "    findmnt output: \n%s" % out)
             regex = re.search(r"\n(\/.*)\s+.*\snfs(?:\d+)?\s+(.*)", out)
             if regex:
                 mount_h[regex.group(1)] =  regex.group(2)
@@ -588,6 +589,7 @@ class Host(BaseObj):
             try:
                 # Try the "mount" command to get options for all mount points
                 out = self.run_cmd("mount", dlevel='DBG5', msg="Get the actual NFS version of mount point: ")
+                self.dprint('DBG3', "    mount output: \n%s" % out)
                 for line in re.split("\n+", out):
                     regex = re.search(r"on\s+(.*)\s+type.*\((.*)\)", line)
                     if regex:
